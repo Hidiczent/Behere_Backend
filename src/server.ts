@@ -27,6 +27,7 @@ if (!ORIGINS.length) {
     console.warn("⚠️ FRONTEND_URL is not set. Set it in .env (can be comma-separated).");
 }
 
+
 app.use(
     cors({
         origin: (origin, cb) => {
