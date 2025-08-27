@@ -13,7 +13,7 @@ const dbg = (...a: any[]) => { if (DBG) console.log(...a); };
 
 // ===== นโยบายจับคู่ =====
 // กันเจอคู่เดิมภายใน X นาที (คูลดาวน์)
-const COOLDOWN_MS = Number(process.env.MATCH_COOLDOWN_MS ?? 10 * 60 * 1000); // default 10 นาที
+const COOLDOWN_MS = Number(process.env.MATCH_COOLDOWN_MS ?? 1 * 60 * 1000); // default 10 นาที
 // ถ้ารอนานเกินกี่ ms จึงยอมให้ "แมตช์ซ้ำ" ได้ (fallback)
 const LONG_WAIT_MS = Number(process.env.MATCH_FALLBACK_WAIT_MS ?? 2 * 60 * 1000); // default 2 นาที
 // ต้องให้ "ทั้งสองฝ่าย" รอนานหรือไม่ (1 = ต้องทั้งคู่, 0 = ฝ่ายใดฝ่ายหนึ่งพอ)

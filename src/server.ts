@@ -10,6 +10,8 @@ import sequelize from "./models"; // <-- ไฟล์นี้ต้อง impor
 import passport from "./config/passport";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
+import ratingsRoute from "./routes/ratings";
+import reportsRoute from "./routes/reports";
 import { initWs } from "./ws/index";
 
 dotenv.config();
@@ -31,8 +33,12 @@ if (!ORIGINS.length) {
 app.use(
     cors({
         origin: (origin, cb) => {
-            if (!origin) return cb(null, true); // เช่น Postman/health check
+            if (!origin) return cb(null, true); // เช่น Postman/health
             if (ORIGINS.includes(origin)) return cb(null, true);
+            // dev fallback: อนุญาต localhost:5173 อัตโนมัติ
+            if (!isProd && /^http:\/\/localhost:5173$/.test(origin)) return cb(null, true);
+
+            console.warn("CORS blocked origin:", origin);
             return cb(null, false);
         },
         credentials: true,
@@ -71,15 +77,18 @@ app.use(passport.initialize());
 // ====== Routes ======
 app.use("/auth", authRoutes);
 app.use("/", userRoutes);
+app.use("/ratings", ratingsRoute);
+app.use("/reports", reportsRoute);
+
 
 // ====== Cookie options helper ======
 export const cookieOpts = () =>
     ({
         httpOnly: true,
-        sameSite: "lax",
-        secure: isProd, // ต้องเป็น true เมื่ออยู่หลัง HTTPS
+        path: "/",
+        sameSite: "none" as const, // ต้องเป็น none เมื่อ FE/BE คนละ origin (ต่างพอร์ตก็นับ)
+        secure: true,              // modern browser บน localhost ก็ ok; prod หลัง https ยิ่งต้อง true
     }) as const;
-
 // ====== Boot ======
 (async () => {
     try {

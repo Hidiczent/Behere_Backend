@@ -19,13 +19,17 @@ function firstFrontend(): string {
 
 // ช่วยตั้งคุกกี้ให้ปลอดภัยตาม env
 function cookieOpts() {
+    // ถ้า FE/BE คนละ origin (ต่างโดเมน/ต่างพอร์ต) ต้องใช้ SameSite=None (+ Secure)
+    const crossSite = true; // dev นี้ 5173 <-> 5050 เป็น cross-site แน่นอน
+
     return {
         httpOnly: true,
-        secure: isProd,
-        sameSite: "lax" as const,
         path: "/",
+        sameSite: crossSite ? ("none" as const) : ("lax" as const),
+        secure: crossSite ? true : isProd,
     };
 }
+
 
 /** สร้าง state แล้วเก็บใน signed cookie (อายุสั้น) */
 router.get("/google", (req: Request, res: Response, next: NextFunction) => {
@@ -48,33 +52,42 @@ router.get(
         const cookieState = req.signedCookies?.oauth_state;
         const queryState = req.query.state;
         if (!cookieState || !queryState || cookieState !== queryState) {
-            // เคลียร์ state ทิ้งเพื่อไม่ให้ค้าง
             res.clearCookie("oauth_state", { path: "/" });
             return res.status(400).send("Invalid OAuth state");
         }
-        // ลบคุกกี้ state ทิ้ง (ใช้แล้วทิ้ง)
         res.clearCookie("oauth_state", { path: "/" });
         next();
     },
     passport.authenticate("google", { session: false, failureRedirect: "/auth/fail" }),
     async (req: any, res) => {
         const user = req.user as User;
-
-        // ✨ ทำ payload ให้ "สอดคล้องทั้งระบบ" → ใช้ uid แทน id
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, {
             expiresIn: "7d",
         });
 
-        // ใส่ token ลง httpOnly cookie
+        // คง set cookie ไว้ใช้ใน production
         res.cookie("token", token, {
-            ...cookieOpts(),
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 วัน
+            // ใช้ helper กลางของคุณ ถ้า prod ให้ SameSite=None; Secure
+            // dev จะไม่พึ่ง cookie นี้
+            httpOnly: true,
+            path: "/",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        // redirect กลับ FE โดย "ไม่" แปะ token ใน URL
-        return res.redirect(`${firstFrontend()}/auth/callback`);
+        const fe = firstFrontend();
+
+        if (process.env.NODE_ENV !== "production") {
+            // ✅ dev: ส่ง token กลับใน hash เพื่อให้ FE เก็บลง localStorage
+            return res.redirect(`${fe}/auth/callback#token=${encodeURIComponent(token)}`);
+        }
+
+        // prod: ไม่ส่ง token ผ่าน URL
+        return res.redirect(`${fe}/auth/callback`);
     }
 );
+
 
 router.get("/fail", (_req, res) => {
     // กัน state ค้างหากมี
