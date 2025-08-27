@@ -12,6 +12,7 @@ import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
 import ratingsRoute from "./routes/ratings";
 import reportsRoute from "./routes/reports";
+import adminRoutes from "./routes/admin";
 import { initWs } from "./ws/index";
 
 dotenv.config();
@@ -79,6 +80,7 @@ app.use("/auth", authRoutes);
 app.use("/", userRoutes);
 app.use("/ratings", ratingsRoute);
 app.use("/reports", reportsRoute);
+app.use("/admin", adminRoutes);   // <— สำคัญมาก
 
 
 // ====== Cookie options helper ======
